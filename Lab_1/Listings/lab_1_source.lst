@@ -1,0 +1,287 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000 00000004 
+                       n       EQU              4
+    2 00000000         
+    3 00000000                 AREA             SRAM1,   NOINIT,   READWRITE
+    4 00000000                 SPACE            0x400
+    5 00000400         Stack_Top
+    6 00000400         
+    7 00000400                 AREA             RESET,   DATA,   READONLY
+    8 00000000 00000000        DCD              Stack_Top
+    9 00000004 00000000        DCD              Start_Init
+   10 00000008         
+   11 00000008                 AREA             PROGRAM,  CODE,   READONLY
+   12 00000000                 ENTRY
+   13 00000000         
+   14 00000000         Start_Init
+   15 00000000         ; R1 = CONST
+   16 00000000 F04F 0104       LDR              R1,    =n
+   17 00000004 F000 F801       BL               Test_N
+   18 00000008         
+   19 00000008         Main_Loop
+   20 00000008 E7FE            B                Main_Loop
+   21 0000000A         
+   22 0000000A         
+   23 0000000A         Test_N
+   24 0000000A         ; !R1 = N = 5
+   25 0000000A         ; R0 = R1 ^2
+   26 0000000A FB01 F001       MUL              R0,    R1,    R1
+   27 0000000E         ; R0 = R1 ^3
+   28 0000000E FB00 F001       MUL              R0,    R0,    R1
+   29 00000012         ; R0 = 2 * n^3
+   30 00000012 F04F 0202       LDR              R2,    =2
+   31 00000016 FB00 F002       MUL              R0,    R0,    R2
+   32 0000001A         ; R2 = 28
+   33 0000001A F04F 021C       LDR              R2,    =28
+   34 0000001E         ; R2 = 28 * n
+   35 0000001E FB02 F201       MUL              R2,    R2,    R1
+   36 00000022         ; R0 = 2 * n^3 + 28 * n
+   37 00000022 4410            ADD              R0,    R0,    R2
+   38 00000024         ; R2 = 271
+   39 00000024 F240 120F       LDR              R2,    =271
+   40 00000028         ; R0 = 2*n^3 + 28*n - 271
+   41 00000028         ; R0 CAN BE WITH "-"
+   42 00000028 EBA0 0002       SUB              R0,    R0,    R2
+   43 0000002C         ; R4 = n / 2
+   44 0000002C F04F 0202       LDR              R2,    =2
+   45 00000030 FB91 F4F2       SDIV             R4,    R1,    R2
+   46 00000034 F04F 0301       LDR              R3,    =1
+   47 00000038         
+   48 00000038 B500            PUSH             {LR}
+   49 0000003A F000 F811       BL               for_label
+   50 0000003E         
+   51 0000003E F04F 024B       LDR              R2,    =75
+   52 00000042 FB92 F2F1       SDIV             R2,    R2,    R1
+   53 00000046         ; R3 = !(n/2) - (75/n)
+   54 00000046 EBA3 0302       SUB              R3,    R3,    R2
+   55 0000004A         ; R4 = (((2*(n^3)) + (28*n) - 271) / (!(n/2) - (75/n))
+   56 0000004A FB90 F4F3       SDIV             R4,    R0,    R3
+   57 0000004E         ; R3 = n/2
+   58 0000004E F04F 0202       LDR              R2,    =2
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+   59 00000052 FB91 F3F2       SDIV             R3,    R1,    R2
+   60 00000056         
+   61 00000056 F000 F80F       BL               for_label_1
+   62 0000005A F85D EB04       POP              {LR}
+   63 0000005E 4770            BX               LR
+   64 00000060         
+   65 00000060         ; \|/
+   66 00000060         ; FOR (i=1; i<=R4; i++)
+   67 00000060         ; R2 -> i
+   68 00000060         ; \|/
+   69 00000060         for_label
+   70 00000060 F04F 0201       MOV              R2,    #1
+   71 00000064         ; \|/
+   72 00000064         for_cycle
+   73 00000064         ; i<=R4;
+   74 00000064 42A2            CMP              R2,    R4
+   75 00000066 D804            BHI              for_end
+   76 00000068 FB03 F302       MUL              R3,    R3,    R2
+   77 0000006C F102 0201       ADD              R2,    R2,    #1
+   78 00000070 E7F8            B                for_cycle
+   79 00000072         
+   80 00000072         for_end
+   81 00000072 F04F 0200       MOV              R2,    #0
+   82 00000076 4770            BX               LR
+   83 00000078         ; \|/
+   84 00000078         ; R4 = 75 / n
+   85 00000078         ; R0 = ("R0")^n/2
+   86 00000078         ; \|/
+   87 00000078         for_label_1
+   88 00000078         ; R1 << R0 
+   89 00000078         ; R0 = 1
+   90 00000078         ; FOR (i=1; i<=R3; i++)
+   91 00000078         ;  {
+   92 00000078         ;  R0 = R0*n
+   93 00000078         ;  }
+   94 00000078 F04F 0001       LDR              R0,    =1
+   95 0000007C F04F 0201       MOV              R2,    #1
+   96 00000080         ; \|/
+   97 00000080         for_cycle_1
+   98 00000080         ; i<=R3;
+   99 00000080 429A            CMP              R2,    R3
+  100 00000082 D804            BHI              for_end_1
+  101 00000084         ; R0 = R0*n
+  102 00000084 FB00 F004       MUL              R0,    R0,    R4
+  103 00000088         ;  i++
+  104 00000088 F102 0201       ADD              R2,    R2,    #1
+  105 0000008C         
+  106 0000008C E7F8            B                for_cycle_1
+  107 0000008E         for_end_1
+  108 0000008E F04F 0100       MOV              R1,    #0
+  109 00000092 F04F 0200       MOV              R2,    #0
+  110 00000096 F04F 0300       MOV              R3,    #0
+  111 0000009A F04F 0400       MOV              R4,    #0
+  112 0000009E         ; \|/
+  113 0000009E 4770            BX               LR
+  114 000000A0         
+  115 000000A0                 END
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp --apcs=int
+erwork --depend=.\objects\lab_1_source.d -o.\objects\lab_1_source.o -I.\RTE\_Ta
+
+
+
+ARM Macro Assembler    Page 3 
+
+
+rget_1 -IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.16.0\Drivers\CMSIS\Device\ST\
+STM32F4xx\Include -IC:\Keil_v5\ARM\CMSIS\Include --predefine="__EVAL SETA 1" --
+predefine="__UVISION_VERSION SETA 524" --predefine="STM32F407xx SETA 1" --list=
+.\listings\lab_1_source.lst Lab_1_Source.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+SRAM1 00000000
+
+Symbol: SRAM1
+   Definitions
+      At line 3 in file Lab_1_Source.s
+   Uses
+      None
+Comment: SRAM1 unused
+Stack_Top 00000400
+
+Symbol: Stack_Top
+   Definitions
+      At line 5 in file Lab_1_Source.s
+   Uses
+      At line 8 in file Lab_1_Source.s
+Comment: Stack_Top used once
+2 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+RESET 00000000
+
+Symbol: RESET
+   Definitions
+      At line 7 in file Lab_1_Source.s
+   Uses
+      None
+Comment: RESET unused
+1 symbol
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+Main_Loop 00000008
+
+Symbol: Main_Loop
+   Definitions
+      At line 19 in file Lab_1_Source.s
+   Uses
+      At line 20 in file Lab_1_Source.s
+Comment: Main_Loop used once
+PROGRAM 00000000
+
+Symbol: PROGRAM
+   Definitions
+      At line 11 in file Lab_1_Source.s
+   Uses
+      None
+Comment: PROGRAM unused
+Start_Init 00000000
+
+Symbol: Start_Init
+   Definitions
+      At line 14 in file Lab_1_Source.s
+   Uses
+      At line 9 in file Lab_1_Source.s
+Comment: Start_Init used once
+Test_N 0000000A
+
+Symbol: Test_N
+   Definitions
+      At line 23 in file Lab_1_Source.s
+   Uses
+      At line 17 in file Lab_1_Source.s
+Comment: Test_N used once
+for_cycle 00000064
+
+Symbol: for_cycle
+   Definitions
+      At line 72 in file Lab_1_Source.s
+   Uses
+      At line 78 in file Lab_1_Source.s
+Comment: for_cycle used once
+for_cycle_1 00000080
+
+Symbol: for_cycle_1
+   Definitions
+      At line 97 in file Lab_1_Source.s
+   Uses
+      At line 106 in file Lab_1_Source.s
+Comment: for_cycle_1 used once
+for_end 00000072
+
+Symbol: for_end
+   Definitions
+      At line 80 in file Lab_1_Source.s
+   Uses
+      At line 75 in file Lab_1_Source.s
+Comment: for_end used once
+for_end_1 0000008E
+
+Symbol: for_end_1
+
+
+
+ARM Macro Assembler    Page 2 Alphabetic symbol ordering
+Relocatable symbols
+
+   Definitions
+      At line 107 in file Lab_1_Source.s
+   Uses
+      At line 100 in file Lab_1_Source.s
+Comment: for_end_1 used once
+for_label 00000060
+
+Symbol: for_label
+   Definitions
+      At line 69 in file Lab_1_Source.s
+   Uses
+      At line 49 in file Lab_1_Source.s
+Comment: for_label used once
+for_label_1 00000078
+
+Symbol: for_label_1
+   Definitions
+      At line 87 in file Lab_1_Source.s
+   Uses
+      At line 61 in file Lab_1_Source.s
+Comment: for_label_1 used once
+10 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Absolute symbols
+
+n 00000004
+
+Symbol: n
+   Definitions
+      At line 1 in file Lab_1_Source.s
+   Uses
+      At line 16 in file Lab_1_Source.s
+Comment: n used once
+1 symbol
+348 symbols in table
